@@ -1,8 +1,9 @@
 ## Description
 
--NEST JS CRUD POC
--Type ORM
--Mysql
+#NEST JS CRUD POC
+
+- Type ORM
+- Mysql
 .
 
 
