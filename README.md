@@ -3,7 +3,12 @@
 #NEST JS CRUD POC
 
 - Type ORM
-- Mysql
+- MYSQL
+- Zod For Validation
+- Argon2 For Hashing
+- Auth With JWT
+- OOP
+  
 .
 
 
