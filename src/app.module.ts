@@ -8,6 +8,8 @@ import { User } from './users/users.entity';
 import { AuthModule } from './auth/auth.module';
 import { PostsModule } from './posts/posts.module';
 import { Post } from './posts/posts.entity';
+import { Comment } from './comments/comments.entity';
+import { CommentsModule } from './comments/comments.module';
 
 @Module({
   imports: [
@@ -22,14 +24,15 @@ import { Post } from './posts/posts.entity';
         username: configService.get('DATABASE_USER'),
         password: configService.get('DATABASE_PASSWORD'),
         database: configService.get('DATABASE_NAME'),
-        entities: [User, Post],
+        entities: [User, Post, Comment],
         synchronize: process.env['NODE_ENV'] === 'development',
       }),
       inject: [ConfigService],
     }),
-    UsersModule,
     AuthModule,
+    UsersModule,
     PostsModule,
+    CommentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,5 +1,4 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { UsersService } from 'src/users/users.service';
 import * as argon2 from 'argon2';
 import { JwtService } from '@nestjs/jwt';
 import { readFile  } from "fs/promises";
@@ -11,7 +10,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 export class AuthService {
 
     constructor(
-        private usersService : UsersService,
         private jwtService : JwtService,
         @InjectRepository(User)
         private usersRepository : Repository<User> )

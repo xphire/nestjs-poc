@@ -5,7 +5,6 @@ import {
   Body,
   HttpException,
   HttpStatus,
-  UsePipes,
   BadRequestException,
   UseInterceptors,
   SerializeOptions,
@@ -19,28 +18,32 @@ import {
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import {
-  CreateUserRequestType as CreateUserDto,
+  updateUserQuerySchema,
   createUserRequestSchema,
   fetchUserQuerySchema,
-  FetchUserQueryType as FetchUserDto,
   fetchUsersQuerySchema,
-  FetchUsersQueryType as FetchUsersDto,
-  PartialUpdateRequestType,
-  FullUpdateRequestType,
   partialUpdateUserRequestSchema,
   fullUpdateUserRequestSchema,
   updateCurrentUserSchema,
-  UpdateCurrentUserType,
-} from './dto/users.dto';
+  FetchUsersQueryDto,
+  CreateUserDto,
+  FetchUserQueryDto,
+  PartialUpdateUserDto,
+  UpdateUserQueryDto,
+  FullUpdateUserDto,
+  UpdateCurrentUserDto
+} from './users.dto';
 import { ZodValidationPipe } from '../validation-pipe';
-import { UserSerializer, UsersSerializer } from './serialization/users.serializer';
+import { UserSerializer, UsersSerializer } from './users.serializer';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { AdminGuard } from 'src/auth/admin.guard';
 import { UserRequest } from 'src/main';
+import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 
 
 
 @Controller('users')
+@ApiBearerAuth()
 export class UsersController {
   constructor(private usersService: UsersService) {}
 
@@ -48,9 +51,9 @@ export class UsersController {
   @UseInterceptors(ClassSerializerInterceptor)
   @SerializeOptions({ type: UsersSerializer })
   @Get()
-  @UsePipes(new ZodValidationPipe(fetchUsersQuerySchema))
+  @ApiOperation({description : 'get all users in paginated form', summary : 'get all users in paginated form'})
   async getManyUsers(
-    @Query(new ZodValidationPipe(fetchUsersQuerySchema)) query: FetchUsersDto,
+    @Query(new ZodValidationPipe(fetchUsersQuerySchema)) query: FetchUsersQueryDto,
   ): Promise<UsersSerializer | null> {
     try {
       const result = await this.usersService.getMany(query);
@@ -63,7 +66,7 @@ export class UsersController {
         users: result.users,
         meta: {
           page: query.page || 1,
-          perPage: parseInt(query.pageSize || '5'),
+          perPage: query.pageSize || parseInt('5'),
           total: result.count,
         },
       };
@@ -83,8 +86,8 @@ export class UsersController {
   @UseInterceptors(ClassSerializerInterceptor)
   @SerializeOptions({ type: UserSerializer })
   @Post('user')
-  @UsePipes(new ZodValidationPipe(createUserRequestSchema))
-  async createUser(@Body() createUserDto: CreateUserDto): Promise<UserSerializer | null> {
+  @ApiOperation({description : 'create user', summary : 'create user'})
+  async createUser(@Body(new ZodValidationPipe(createUserRequestSchema)) createUserDto: CreateUserDto): Promise<UserSerializer | null> {
     try {
       const user = await this.usersService.create(createUserDto);
 
@@ -104,19 +107,20 @@ export class UsersController {
   @UseInterceptors(ClassSerializerInterceptor)
   @SerializeOptions({ type: UserSerializer })
   @Get('user')
+  @ApiOperation({description : 'fetch user using id,uuid or email', summary : 'fetch user using id,uuid or email'})
   async getOneUser(
-    @Query(new ZodValidationPipe(fetchUserQuerySchema)) query: FetchUserDto,
+    @Query(new ZodValidationPipe(fetchUserQuerySchema)) query: FetchUserQueryDto,
   ): Promise<UserSerializer | null> {
     const { id, email, uuid } = query;
 
     try {
       const user = await this.usersService.getOne({ id, email, uuid });
 
-      if (!user) throw new BadRequestException('user not found');
+      if (!user) throw new NotFoundException('user not found');
 
       return user;
     } catch (error) {
-      if (error instanceof BadRequestException) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
 
@@ -128,10 +132,16 @@ export class UsersController {
   @UseInterceptors(ClassSerializerInterceptor)
   @SerializeOptions({ type: UserSerializer })
   @Patch('user')
-  @UsePipes(new ZodValidationPipe(partialUpdateUserRequestSchema))
-  async partialUpdateUser(@Body() partialUpdateUserDto: PartialUpdateRequestType) {
+  @ApiOperation({description : 'partially update user', summary : 'partially update user'})
+  async partialUpdateUser(
+    @Query(new ZodValidationPipe(updateUserQuerySchema)) fetchUserQueryDto: UpdateUserQueryDto,
+    @Body(new ZodValidationPipe(partialUpdateUserRequestSchema)) partialUpdateUserDto: PartialUpdateUserDto,
+   ) {
     try {
-      const user = await this.usersService.partialUpdate(partialUpdateUserDto);
+      const user = await this.usersService.update({
+        ...partialUpdateUserDto,
+        ...fetchUserQueryDto
+      });
 
       return user;
     } catch (error) {
@@ -149,10 +159,12 @@ export class UsersController {
   @UseInterceptors(ClassSerializerInterceptor)
   @SerializeOptions({ type: UserSerializer })
   @Put('user')
-  @UsePipes(new ZodValidationPipe(fullUpdateUserRequestSchema))
-  async fullUpdateUser(@Body() fullUpdateUserDto: FullUpdateRequestType) {
+  @ApiOperation({description : 'fully update user', summary : 'fully update user'})
+  async fullUpdateUser(
+    @Query(new ZodValidationPipe(updateUserQuerySchema)) fetchUserQueryDto: UpdateUserQueryDto,
+    @Body(new ZodValidationPipe(fullUpdateUserRequestSchema)) fullUpdateUserDto: FullUpdateUserDto) {
     try {
-      const user = await this.usersService.fullUpdate(fullUpdateUserDto);
+      const user = await this.usersService.update(fullUpdateUserDto);
 
       return user;
     } catch (error) {
@@ -170,6 +182,7 @@ export class UsersController {
   @UseInterceptors(ClassSerializerInterceptor)
   @SerializeOptions({ type: UserSerializer })
   @Get('current')
+  @ApiOperation({description : 'get current authenticated user', summary : 'get current authenticated user'})
   async getCurrentUser(@Request() request: UserRequest) {
     try {
       return await this.usersService.getOne({ id: request.user.sub });
@@ -188,10 +201,12 @@ export class UsersController {
   @UseInterceptors(ClassSerializerInterceptor)
   @SerializeOptions({ type: UserSerializer })
   @Patch('current')
-  @UsePipes(new ZodValidationPipe(updateCurrentUserSchema))
-  async updateCurrentUser(@Request() request: UserRequest, @Body() payload: UpdateCurrentUserType) {
+  @ApiOperation({description : 'partially update current authenticated user', summary : 'partially update current authenticated user'})
+  async updateCurrentUser(
+    @Request() request: UserRequest,
+    @Body(new ZodValidationPipe(updateCurrentUserSchema)) payload: UpdateCurrentUserDto) {
     try {
-      return this.usersService.partialUpdate({
+      return this.usersService.update({
         id: request.user.sub,
         ...payload,
       });

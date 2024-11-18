@@ -7,26 +7,22 @@ import {
   FetchUserQueryType,
   FetchUsersQueryType,
   PartialUpdateRequestType,
-  FullUpdateRequestType,
-} from './dto/users.dto';
+} from './users.dto';
 import * as argon2 from 'argon2';
 
-interface GetManyResults{
-    
-    count : number,
-    users : User[]
-
+interface GetManyResults {
+  count: number;
+  users: User[];
 }
 
 const selectOptions = {
-
-     id : true,
-     uuid : true,
-     email : true,
-     isAdmin : true,
-     firstName : true,
-     lastName : true
-}
+  id: true,
+  uuid: true,
+  email: true,
+  isAdmin: true,
+  firstName: true,
+  lastName: true,
+};
 
 @Injectable()
 export class UsersService {
@@ -39,7 +35,7 @@ export class UsersService {
     const existingUser = await this.usersRepository.findOne({
       where: {
         email: payload.email,
-      }
+      },
     });
 
     if (existingUser) {
@@ -69,7 +65,7 @@ export class UsersService {
         where: {
           email,
         },
-        select : selectOptions
+        select: selectOptions,
       });
     }
 
@@ -78,7 +74,7 @@ export class UsersService {
         where: {
           id,
         },
-        select : selectOptions
+        select: selectOptions,
       });
     }
 
@@ -87,7 +83,7 @@ export class UsersService {
         where: {
           uuid,
         },
-        select : selectOptions
+        select: selectOptions,
       });
     }
 
@@ -96,48 +92,41 @@ export class UsersService {
 
   async getMany(query: FetchUsersQueryType): Promise<GetManyResults | null> {
     const page = query.page || 1;
-    const take = parseInt(query.pageSize || '5');
+    const take = query.pageSize || parseInt('5');
 
     const skip = (page - 1) * take;
 
     return {
-
-      count : await this.usersRepository.count(),
-      users : await this.usersRepository.find({
-             skip,
-             take,
-             select : selectOptions
-      })
-    }
-
+      count: await this.usersRepository.count(),
+      users: await this.usersRepository.find({
+        skip,
+        take,
+        select: selectOptions,
+      }),
+    };
   }
 
-  async partialUpdate(payload: PartialUpdateRequestType): Promise<User | null> {
-    const { id,uuid, ...rest } = payload;
+  async update(
+    payload: PartialUpdateRequestType & { id?: number; uuid?: string },
+  ): Promise<User | null> {
+    const { id, uuid, ...rest } = payload;
 
-
-    if(uuid){
-
+    if (uuid) {
       await this.usersRepository.update({ uuid }, rest);
 
-      return this.usersRepository.findOneBy({ uuid });
-    
+      return this.usersRepository.findOneBy({ id });
     }
 
-    await this.usersRepository.update({ id }, rest);
+    if (id) {
+      await this.usersRepository.update({ id }, rest);
 
-    return this.usersRepository.findOneBy({ id });
+      return this.usersRepository.findOneBy({ id });
+    }
+
+    throw new BadRequestException('kindly supply one of ID or UUID only as a query Param');
   }
 
-  async fullUpdate(payload: FullUpdateRequestType): Promise<User | null> {
-    const { id, ...rest } = payload;
-
-    await this.usersRepository.update({ id }, rest);
-
-    return this.usersRepository.findOneBy({ id });
-  }
-
-  async remove(payload: { id: number }): Promise<DeleteResult> {
+  async remove(payload: { id: number }): Promise<DeleteResult | null> {
     const { id } = payload;
 
     return this.usersRepository.delete({ id });

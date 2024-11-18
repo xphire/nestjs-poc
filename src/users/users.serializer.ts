@@ -1,5 +1,5 @@
 //import { CreateUserResponseType } from "../users.dto";
-import { User } from "../users.entity";
+import { User } from "./users.entity";
 import { Exclude, Expose, Type } from "class-transformer";
 
 
