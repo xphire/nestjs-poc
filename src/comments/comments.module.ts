@@ -5,7 +5,7 @@ import { Comment } from './comments.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersModule } from 'src/users/users.module';
 import  {PostsModule} from 'src/posts/posts.module'
-import { Post } from '../posts/posts.entity';
+import { Post } from 'src/posts/posts.entity';
 
 @Module({
   imports : [TypeOrmModule.forFeature([Comment, Post]), UsersModule, PostsModule],

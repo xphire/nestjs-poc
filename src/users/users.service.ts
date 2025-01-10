@@ -38,6 +38,8 @@ export class UsersService {
       },
     });
 
+    //console.log(existingUser)
+
     if (existingUser) {
       throw new BadRequestException('user already exists');
     }
